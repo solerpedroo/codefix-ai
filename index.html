@@ -402,20 +402,7 @@
         <div class="main-grid">
             <div class="code-panel">
                 <h2>Código Original</h2>
-                <textarea id="codeInput" placeholder="Cole seu código aqui para análise...">def calculate_average(numbers):
-    sum = 0
-    for i in range(len(numbers)):
-        sum = sum + numbers[i]
-    average = sum / len(numbers)
-    return average
-
-def main():
-    data = [1, 2, 3, 4, 5]
-    result = calculate_average(data)
-    print("Average:", result)
-
-if __name__ == "__main__":
-    main()</textarea>
+                <textarea id="codeInput" placeholder="Cole seu código aqui para análise...">printf("Hello World")</textarea>
                 <button class="btn btn-primary analyze-btn" onclick="analyzeCode()" id="analyzeBtn">
                     Analisar Código
                 </button>
@@ -443,107 +430,389 @@ if __name__ == "__main__":
         let currentResult = null;
         const HISTORY_KEY = 'codefix_history';
 
-        // Sistema de análise local (simula IA)
-        function analyzeCodeLocally(code, language) {
+        // Sistema de análise para todas as linguagens
+        function analyzeCodeByLanguage(code, language) {
             let hasIssues = false;
             let issues = [];
             let correctedCode = code;
             let summary = "Nenhum problema encontrado.";
-
-            // Análise para Python
-            if (language === 'python') {
-                const lines = code.split('\n');
+            
+            const lines = code.split('\n');
+            
+            // Análise genérica para qualquer linguagem
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
                 
-                // Verificar problemas comuns
-                lines.forEach((line, index) => {
-                    const lineNum = index + 1;
-                    
-                    // Verificar uso de 'sum' como nome de variável
-                    if (line.includes('sum =') && line.includes('sum +')) {
-                        hasIssues = true;
-                        issues.push({
-                            type: "naming",
-                            severity: "medium",
-                            line: lineNum,
-                            description: "Uso de 'sum' como nome de variável pode sobrescrever a função built-in sum()",
-                            suggestion: "Use 'total' ou 'soma' em vez de 'sum'"
-                        });
-                    }
-                    
-                    // Verificar loops ineficientes
-                    if (line.includes('range(len(') && line.includes('numbers[')) {
-                        hasIssues = true;
-                        issues.push({
-                            type: "performance",
-                            severity: "low",
-                            line: lineNum,
-                            description: "Loop usando range(len()) é menos eficiente que enumerate()",
-                            suggestion: "Substitua por 'for i, num in enumerate(numbers):'"
-                        });
-                    }
-                    
-                    // Verificar divisão sem tratamento de erro
-                    if (line.includes('/ len(') && !code.includes('if len(') && !code.includes('try:')) {
-                        hasIssues = true;
-                        issues.push({
-                            type: "validation",
-                            severity: "high",
-                            line: lineNum,
-                            description: "Divisão por len(numbers) sem verificar se a lista está vazia",
-                            suggestion: "Adicione verificação: 'if len(numbers) > 0:'"
-                        });
-                    }
-                });
-                
-                // Gerar código corrigido
-                if (hasIssues) {
-                    correctedCode = code
-                        .replace(/sum\s*=/g, 'total =')
-                        .replace(/sum\s*\+/g, 'total +')
-                        .replace(/sum\s*\//g, 'total /')
-                        .replace(/for i in range\(len\(numbers\)\):/g, 'for i, num in enumerate(numbers):')
-                        .replace(/numbers\[i\]/g, 'num');
-                    
-                    // Adicionar validação
-                    if (code.includes('average = sum / len(numbers)')) {
-                        const validationCode = `def calculate_average(numbers):
-    if len(numbers) == 0:
-        return 0  # Ou lançar uma exceção
-    total = 0
-    for num in numbers:
-        total = total + num
-    average = total / len(numbers)
-    return average`;
-                        correctedCode = validationCode + code.substring(code.indexOf('\ndef'));
-                    }
-                    
-                    summary = `Foram encontrados ${issues.length} problema(s) no código. ` +
-                             `Correções aplicadas: uso de nomes descritivos, loops mais eficientes e validação de entrada.`;
-                }
-            }
-            // Análise para JavaScript
-            else if (language === 'javascript') {
-                if (code.includes('var ') || code.includes('console.log(')) {
-                    hasIssues = true;
+                // Verificar linha em branco no final do arquivo
+                if (index === lines.length - 1 && line.trim() === '') {
                     issues.push({
-                        type: "best_practices",
-                        severity: "medium",
+                        type: "formatting",
+                        severity: "low",
+                        line: lineNum,
+                        description: "Linha em branco no final do arquivo",
+                        suggestion: "Remova a linha em branco final"
+                    });
+                    hasIssues = true;
+                }
+                
+                // Verificar tab vs espaços (consistência)
+                if (line.includes('\t') && line.includes('  ')) {
+                    issues.push({
+                        type: "formatting",
+                        severity: "low",
+                        line: lineNum,
+                        description: "Mistura de tabs e espaços para indentação",
+                        suggestion: "Use apenas espaços (recomendado: 4 espaços por nível)"
+                    });
+                    hasIssues = true;
+                }
+                
+                // Verificar linhas muito longas (> 80 caracteres)
+                if (line.length > 80) {
+                    issues.push({
+                        type: "readability",
+                        severity: "low",
+                        line: lineNum,
+                        description: "Linha muito longa (" + line.length + " caracteres)",
+                        suggestion: "Quebre a linha em múltiplas linhas para melhor legibilidade"
+                    });
+                    hasIssues = true;
+                }
+            });
+            
+            // Análises específicas por linguagem
+            switch(language) {
+                case 'python':
+                    analyzePython(code, lines, issues);
+                    hasIssues = issues.length > 0;
+                    break;
+                    
+                case 'javascript':
+                    analyzeJavaScript(code, lines, issues);
+                    hasIssues = issues.length > 0;
+                    break;
+                    
+                case 'c':
+                case 'cpp':
+                    analyzeC_CPP(code, lines, issues, language);
+                    hasIssues = issues.length > 0;
+                    break;
+                    
+                case 'java':
+                    analyzeJava(code, lines, issues);
+                    hasIssues = issues.length > 0;
+                    break;
+                    
+                case 'sql':
+                    analyzeSQL(code, lines, issues);
+                    hasIssues = issues.length > 0;
+                    break;
+                    
+                case 'php':
+                    analyzePHP(code, lines, issues);
+                    hasIssues = issues.length > 0;
+                    break;
+                    
+                case 'ruby':
+                    analyzeRuby(code, lines, issues);
+                    hasIssues = issues.length > 0;
+                    break;
+                    
+                case 'go':
+                    analyzeGo(code, lines, issues);
+                    hasIssues = issues.length > 0;
+                    break;
+            }
+            
+            // Se for Python e tiver printf, corrigir para print
+            if (language === 'python' && code.includes('printf(')) {
+                hasIssues = true;
+                correctedCode = code.replace(/printf\(/g, 'print(');
+                issues.push({
+                    type: "syntax",
+                    severity: "high",
+                    line: 1,
+                    description: "Uso de printf() em Python - função não existe nativamente",
+                    suggestion: "Use print() em vez de printf()"
+                });
+                summary = "Corrigida função printf() para print() em Python.";
+            }
+            // Se for C/C++ e não tiver main() ou includes necessários
+            else if ((language === 'c' || language === 'cpp') && code.includes('printf(')) {
+                if (!code.includes('#include')) {
+                    hasIssues = true;
+                    correctedCode = '#include <stdio.h>\n\n' + code;
+                    issues.push({
+                        type: "missing_dependency",
+                        severity: "high",
                         line: 1,
-                        description: "Uso de 'var' em vez de 'let' ou 'const'",
-                        suggestion: "Substitua 'var' por 'let' ou 'const' conforme apropriado"
+                        description: "Falta #include para biblioteca padrão",
+                        suggestion: "Adicione #include <stdio.h> para usar printf()"
                     });
                     
-                    correctedCode = code.replace(/var /g, 'const ');
-                    summary = "Código atualizado para usar 'const' em vez de 'var'.";
+                    // Se não tem main function
+                    if (!code.includes('int main') && !code.includes('void main') && !code.includes('main(')) {
+                        correctedCode = '#include <stdio.h>\n\nint main() {\n    ' + code + ';\n    return 0;\n}';
+                        issues.push({
+                            type: "structure",
+                            severity: "high",
+                            line: 1,
+                            description: "Código C/C++ sem função main()",
+                            suggestion: "Envolva o código em uma função main()"
+                        });
+                    }
+                    summary = "Adicionados includes necessários e estrutura main().";
                 }
             }
-
+            
+            // Se não houver issues específicas, mostrar mensagem positiva
+            if (!hasIssues) {
+                summary = "Código analisado. Nenhum problema encontrado para a linguagem " + language + ".";
+            } else if (summary === "Nenhum problema encontrado.") {
+                summary = "Foram encontrados " + issues.length + " problema(s) no código " + language + ".";
+            }
+            
             return {
                 hasIssues: hasIssues,
                 issues: issues,
                 correctedCode: correctedCode,
                 summary: summary
             };
+        }
+        
+        // Funções de análise específicas
+        function analyzePython(code, lines, issues) {
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                
+                // Verificar uso de print sem parênteses (Python 2 vs 3)
+                if (line.includes('print ') && !line.includes('print(') && !line.includes('#')) {
+                    issues.push({
+                        type: "compatibility",
+                        severity: "medium",
+                        line: lineNum,
+                        description: "Sintaxe de print do Python 2 (sem parênteses)",
+                        suggestion: "Use print() com parênteses para compatibilidade com Python 3"
+                    });
+                }
+                
+                // Verificar imports no meio do código
+                if (line.includes('import ') && index > 0 && lines[index-1].trim() !== '') {
+                    issues.push({
+                        type: "structure",
+                        severity: "low",
+                        line: lineNum,
+                        description: "Import no meio do código",
+                        suggestion: "Mova todos os imports para o início do arquivo"
+                    });
+                }
+            });
+        }
+        
+        function analyzeJavaScript(code, lines, issues) {
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                
+                // Verificar uso de var
+                if (line.includes('var ') && !line.includes('//')) {
+                    issues.push({
+                        type: "best_practices",
+                        severity: "medium",
+                        line: lineNum,
+                        description: "Uso de 'var' (antigo)",
+                        suggestion: "Use 'let' ou 'const' em vez de 'var'"
+                    });
+                }
+                
+                // Verificar == em vez de ===
+                if ((line.includes(' == ') || line.includes('!=')) && !line.includes('===') && !line.includes('!==')) {
+                    issues.push({
+                        type: "type_safety",
+                        severity: "medium",
+                        line: lineNum,
+                        description: "Operadores de igualdade não estritos",
+                        suggestion: "Use === e !== para comparações estritas"
+                    });
+                }
+            });
+        }
+        
+        function analyzeC_CPP(code, lines, issues, language) {
+            const langName = language === 'c' ? 'C' : 'C++';
+            let hasMain = false;
+            let hasInclude = false;
+            
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                
+                if (line.includes('int main') || line.includes('void main') || line.includes('main(')) {
+                    hasMain = true;
+                }
+                
+                if (line.includes('#include')) {
+                    hasInclude = true;
+                }
+                
+                // Verificar gets() (perigoso)
+                if (line.includes('gets(')) {
+                    issues.push({
+                        type: "security",
+                        severity: "high",
+                        line: lineNum,
+                        description: "Uso de gets() - função insegura",
+                        suggestion: "Use fgets() ou scanf() com limite de tamanho"
+                    });
+                }
+            });
+            
+            if (!hasMain && code.trim().length > 0) {
+                issues.push({
+                    type: "structure",
+                    severity: "high",
+                    line: 1,
+                    description: "Código " + langName + " sem função main()",
+                    suggestion: "Adicione uma função main() para executar o código"
+                });
+            }
+        }
+        
+        function analyzeJava(code, lines, issues) {
+            let hasClass = false;
+            let hasMain = false;
+            
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                
+                if (line.includes('class ')) {
+                    hasClass = true;
+                }
+                
+                if (line.includes('public static void main')) {
+                    hasMain = true;
+                }
+                
+                // Verificar System.out.println vs System.out.print
+                if (line.includes('System.out.print(') && !line.includes('System.out.println(') && !line.includes('//')) {
+                    issues.push({
+                        type: "formatting",
+                        severity: "low",
+                        line: lineNum,
+                        description: "Uso de print() sem quebra de linha",
+                        suggestion: "Use println() para adicionar quebra de linha automaticamente"
+                    });
+                }
+            });
+            
+            if (!hasClass && code.trim().length > 0) {
+                issues.push({
+                    type: "structure",
+                    severity: "high",
+                    line: 1,
+                    description: "Código Java sem definição de classe",
+                    suggestion: "Envolva o código em uma classe pública"
+                });
+            }
+        }
+        
+        function analyzeSQL(code, lines, issues) {
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                
+                // Verificar SELECT * sem WHERE em produção
+                if (line.includes('SELECT *') && !line.includes('WHERE') && !line.includes('--')) {
+                    issues.push({
+                        type: "performance",
+                        severity: "medium",
+                        line: lineNum,
+                        description: "SELECT * sem cláusula WHERE",
+                        suggestion: "Especifique colunas necessárias e adicione WHERE se aplicável"
+                    });
+                }
+                
+                // Verificar falta de ponto e vírgula
+                if (index === lines.length - 1 && line.trim() !== '' && !line.trim().endsWith(';')) {
+                    issues.push({
+                        type: "syntax",
+                        severity: "low",
+                        line: lineNum,
+                        description: "Falta ponto e vírgula no final",
+                        suggestion: "Adicione ; no final da instrução SQL"
+                    });
+                }
+            });
+        }
+        
+        function analyzePHP(code, lines, issues) {
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                
+                // Verificar tags curtas <? em vez de <?php
+                if (line.includes('<? ') && !line.includes('<?php')) {
+                    issues.push({
+                        type: "compatibility",
+                        severity: "medium",
+                        line: lineNum,
+                        description: "Uso de tags curtas do PHP",
+                        suggestion: "Use <?php para melhor compatibilidade"
+                    });
+                }
+                
+                // Verificar echo sem parênteses
+                if (line.includes('echo ') && !line.includes('echo(') && line.includes('"')) {
+                    issues.push({
+                        type: "consistency",
+                        severity: "low",
+                        line: lineNum,
+                        description: "echo sem parênteses",
+                        suggestion: "Use echo() para consistência com outras funções"
+                    });
+                }
+            });
+        }
+        
+        function analyzeRuby(code, lines, issues) {
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                
+                // Verificar puts vs print
+                if (line.includes('print ') && !line.includes('puts ')) {
+                    issues.push({
+                        type: "formatting",
+                        severity: "low",
+                        line: lineNum,
+                        description: "Uso de print sem quebra de linha",
+                        suggestion: "Use puts para adicionar quebra de linha automaticamente"
+                    });
+                }
+            });
+        }
+        
+        function analyzeGo(code, lines, issues) {
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                
+                // Verificar Println vs Printf
+                if (line.includes('fmt.Print') && !line.includes('fmt.Println') && !line.includes('fmt.Printf')) {
+                    issues.push({
+                        type: "formatting",
+                        severity: "low",
+                        line: lineNum,
+                        description: "Print sem formatação",
+                        suggestion: "Use Println para linha ou Printf para formatação"
+                    });
+                }
+            });
+            
+            // Verificar se tem package main
+            if (code.trim().length > 0 && !code.includes('package main')) {
+                issues.push({
+                    type: "structure",
+                    severity: "high",
+                    line: 1,
+                    description: "Falta declaração de pacote",
+                    suggestion: "Adicione 'package main' no início"
+                });
+            }
         }
 
         async function analyzeCode() {
@@ -559,13 +828,13 @@ if __name__ == "__main__":
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<span class="loading"></span> Analisando...';
 
-            document.getElementById('resultContainer').innerHTML = '<div class="placeholder"><div class="loading" style="width: 60px; height: 60px; border-width: 5px;"></div><p style="margin-top: 20px;">Analisando código...</p></div>';
+            document.getElementById('resultContainer').innerHTML = '<div class="placeholder"><div class="loading" style="width: 60px; height: 60px; border-width: 5px;"></div><p style="margin-top: 20px;">Analisando código ' + language + '...</p></div>';
 
             try {
                 // Simular tempo de análise
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await new Promise(resolve => setTimeout(resolve, 800));
                 
-                const result = analyzeCodeLocally(code, language);
+                const result = analyzeCodeByLanguage(code, language);
                 currentResult = result;
                 displayResult(result);
                 
@@ -585,7 +854,7 @@ if __name__ == "__main__":
 
             } catch (error) {
                 console.error('Erro na análise:', error);
-                document.getElementById('resultContainer').innerHTML = '<div class="placeholder" style="color: #ef4444;"><p>Erro ao analisar código. Tente novamente.</p></div>';
+                document.getElementById('resultContainer').innerHTML = '<div class="placeholder" style="color: #ef4444;"><p>Erro ao analisar código. Tente novamente.</p><p style="font-size: 0.9em;">' + error.message + '</p></div>';
             } finally {
                 analyzeBtn.disabled = false;
                 analyzeBtn.innerHTML = 'Analisar Código';
@@ -594,8 +863,8 @@ if __name__ == "__main__":
 
         function displayResult(result) {
             let statsHtml = '';
-            if (result.hasIssues) {
-                statsHtml = '<div class="stats"><div class="stat-item">' + result.issues.length + ' problema(s) corrigido(s)</div></div>';
+            if (result.hasIssues && result.issues.length > 0) {
+                statsHtml = '<div class="stats"><div class="stat-item">' + result.issues.length + ' problema(s) encontrado(s)</div></div>';
             }
 
             document.getElementById('resultContainer').innerHTML = '<pre class="result-code">' + result.correctedCode + '</pre>' + statsHtml;
@@ -603,7 +872,7 @@ if __name__ == "__main__":
             const summarySection = document.getElementById('summarySection');
             summarySection.style.display = 'block';
 
-            if (!result.hasIssues) {
+            if (!result.hasIssues || result.issues.length === 0) {
                 summarySection.innerHTML = '<div class="success-panel"><div><h3 style="color: #22c55e; margin-bottom: 5px;">Código Perfeito!</h3><p style="color: #86efac;">Nenhum problema detectado. Seu código está seguindo as boas práticas.</p></div></div>';
             } else {
                 const issuesHtml = result.issues.map(function(issue, index) {
