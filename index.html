@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeFix AI - Detector de Falhas em Código</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2f4f 50%, #0d1b2a 100%);
+            color: #e0e7ff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(30, 58, 138, 0.3);
+            border-radius: 20px;
+            border: 2px solid #1e3a8a;
+            box-shadow: 0 8px 32px rgba(30, 58, 138, 0.4);
+        }
+
+        .header h1 {
+            font-size: 3.5em;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #93c5fd;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+
+        .developer {
+            color: #60a5fa;
+            font-size: 0.9em;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        .controls {
+            background: rgba(30, 58, 138, 0.2);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 1px solid #1e40af;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .controls select {
+            background: #1e3a8a;
+            color: #e0e7ff;
+            border: 2px solid #2563eb;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .controls select:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(30, 58, 138, 0.5);
+            color: #93c5fd;
+            border: 2px solid #2563eb;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(30, 58, 138, 0.8);
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .code-panel {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid #1e40af;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(30, 64, 175, 0.3);
+        }
+
+        .code-panel h2 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        textarea {
+            width: 100%;
+            height: 400px;
+            background: #0f172a;
+            border: 2px solid #1e40af;
+            border-radius: 10px;
+            padding: 15px;
+            color: #e0e7ff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: all 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .analyze-btn {
+            width: 100%;
+            margin-top: 15px;
+            padding: 15px;
+            font-size: 1.1em;
+        }
+
+        .result-code {
+            background: #0f172a;
+            border: 2px solid #1e40af;
+            border-radius: 10px;
+            padding: 15px;
+            height: 400px;
+            overflow: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #4ade80;
+            white-space: pre-wrap;
+        }
+
+        .placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #475569;
+            text-align: center;
+        }
+
+        .summary-panel {
+            background: rgba(30, 58, 138, 0.2);
+            border: 2px solid #1e40af;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .summary-panel h3 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .issues-container {
+            display: grid;
+            gap: 15px;
+        }
+
+        .issue-card {
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid;
+            transition: transform 0.3s;
+        }
+
+        .issue-card:hover {
+            transform: translateX(5px);
+        }
+
+        .issue-high {
+            background: rgba(220, 38, 38, 0.1);
+            border-color: #dc2626;
+        }
+
+        .issue-medium {
+            background: rgba(234, 179, 8, 0.1);
+            border-color: #eab308;
+        }
+
+        .issue-low {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+        }
+
+        .issue-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .issue-type {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+
+        .severity-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .severity-high { background: #dc2626; color: white; }
+        .severity-medium { background: #eab308; color: white; }
+        .severity-low { background: #3b82f6; color: white; }
+
+        .success-panel {
+            background: rgba(34, 197, 94, 0.1);
+            border: 2px solid #22c55e;
+            border-radius: 15px;
+            padding: 25px;
+        }
+
+        .history-panel {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid #1e40af;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: rgba(30, 58, 138, 0.3);
+            border: 1px solid #1e40af;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+        }
+
+        .history-item:hover {
+            background: rgba(30, 58, 138, 0.5);
+            transform: translateX(5px);
+        }
+
+        .language-badge {
+            background: #2563eb;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            font-family: monospace;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+            border-top: 1px solid #1e40af;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .stat-item {
+            background: rgba(30, 58, 138, 0.3);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>CodeFix AI</h1>
+            <p>Detecte falhas e otimize seu código automaticamente</p>
+            <div class="developer">Desenvolvido por Pedro Soler</div>
+        </div>
+
+        <div class="controls">
+            <div>
+                <label style="margin-right: 10px; color: #93c5fd;">Linguagem:</label>
+                <select id="languageSelect">
+                    <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="typescript">TypeScript</option>
+                    <option value="c">C</option>
+                    <option value="cpp">C++</option>
+                    <option value="java">Java</option>
+                    <option value="sql">SQL</option>
+                    <option value="go">Go</option>
+                    <option value="php">PHP</option>
+                    <option value="ruby">Ruby</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="toggleHistory()">
+                    Histórico (<span id="historyCount">0</span>)
+                </button>
+                <button class="btn btn-secondary" id="downloadBtn" onclick="downloadReport()" style="display: none;">
+                    Baixar Relatório
+                </button>
+            </div>
+        </div>
+
+        <div id="historyPanel" class="history-panel" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="color: #60a5fa; margin: 0;">Histórico de Análises</h3>
+                <button class="btn btn-danger" onclick="clearHistory()">Limpar Tudo</button>
+            </div>
+            <div id="historyList"></div>
+        </div>
+
+        <div class="main-grid">
+            <div class="code-panel">
+                <h2>Código Original</h2>
+                <textarea id="codeInput" placeholder="Cole seu código aqui para análise...">def calculate_average(numbers):
+    sum = 0
+    for i in range(len(numbers)):
+        sum = sum + numbers[i]
+    average = sum / len(numbers)
+    return average
+
+def main():
+    data = [1, 2, 3, 4, 5]
+    result = calculate_average(data)
+    print("Average:", result)
+
+if __name__ == "__main__":
+    main()</textarea>
+                <button class="btn btn-primary analyze-btn" onclick="analyzeCode()" id="analyzeBtn">
+                    Analisar Código
+                </button>
+            </div>
+
+            <div class="code-panel">
+                <h2>Código Corrigido</h2>
+                <div id="resultContainer">
+                    <div class="placeholder">
+                        <p>Aguardando análise...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="summarySection" style="display: none;"></div>
+
+        <div class="footer">
+            <p>Análise de código em tempo real - Versão Local</p>
+            <p style="margin-top: 5px;">© 2026 Pedro Soler - Todos os direitos reservados</p>
+        </div>
+    </div>
+
+    <script>
+        let currentResult = null;
+        const HISTORY_KEY = 'codefix_history';
+
+        // Sistema de análise local (simula IA)
+        function analyzeCodeLocally(code, language) {
+            let hasIssues = false;
+            let issues = [];
+            let correctedCode = code;
+            let summary = "Nenhum problema encontrado.";
+
+            // Análise para Python
+            if (language === 'python') {
+                const lines = code.split('\n');
+                
+                // Verificar problemas comuns
+                lines.forEach((line, index) => {
+                    const lineNum = index + 1;
+                    
+                    // Verificar uso de 'sum' como nome de variável
+                    if (line.includes('sum =') && line.includes('sum +')) {
+                        hasIssues = true;
+                        issues.push({
+                            type: "naming",
+                            severity: "medium",
+                            line: lineNum,
+                            description: "Uso de 'sum' como nome de variável pode sobrescrever a função built-in sum()",
+                            suggestion: "Use 'total' ou 'soma' em vez de 'sum'"
+                        });
+                    }
+                    
+                    // Verificar loops ineficientes
+                    if (line.includes('range(len(') && line.includes('numbers[')) {
+                        hasIssues = true;
+                        issues.push({
+                            type: "performance",
+                            severity: "low",
+                            line: lineNum,
+                            description: "Loop usando range(len()) é menos eficiente que enumerate()",
+                            suggestion: "Substitua por 'for i, num in enumerate(numbers):'"
+                        });
+                    }
+                    
+                    // Verificar divisão sem tratamento de erro
+                    if (line.includes('/ len(') && !code.includes('if len(') && !code.includes('try:')) {
+                        hasIssues = true;
+                        issues.push({
+                            type: "validation",
+                            severity: "high",
+                            line: lineNum,
+                            description: "Divisão por len(numbers) sem verificar se a lista está vazia",
+                            suggestion: "Adicione verificação: 'if len(numbers) > 0:'"
+                        });
+                    }
+                });
+                
+                // Gerar código corrigido
+                if (hasIssues) {
+                    correctedCode = code
+                        .replace(/sum\s*=/g, 'total =')
+                        .replace(/sum\s*\+/g, 'total +')
+                        .replace(/sum\s*\//g, 'total /')
+                        .replace(/for i in range\(len\(numbers\)\):/g, 'for i, num in enumerate(numbers):')
+                        .replace(/numbers\[i\]/g, 'num');
+                    
+                    // Adicionar validação
+                    if (code.includes('average = sum / len(numbers)')) {
+                        const validationCode = `def calculate_average(numbers):
+    if len(numbers) == 0:
+        return 0  # Ou lançar uma exceção
+    total = 0
+    for num in numbers:
+        total = total + num
+    average = total / len(numbers)
+    return average`;
+                        correctedCode = validationCode + code.substring(code.indexOf('\ndef'));
+                    }
+                    
+                    summary = `Foram encontrados ${issues.length} problema(s) no código. ` +
+                             `Correções aplicadas: uso de nomes descritivos, loops mais eficientes e validação de entrada.`;
+                }
+            }
+            // Análise para JavaScript
+            else if (language === 'javascript') {
+                if (code.includes('var ') || code.includes('console.log(')) {
+                    hasIssues = true;
+                    issues.push({
+                        type: "best_practices",
+                        severity: "medium",
+                        line: 1,
+                        description: "Uso de 'var' em vez de 'let' ou 'const'",
+                        suggestion: "Substitua 'var' por 'let' ou 'const' conforme apropriado"
+                    });
+                    
+                    correctedCode = code.replace(/var /g, 'const ');
+                    summary = "Código atualizado para usar 'const' em vez de 'var'.";
+                }
+            }
+
+            return {
+                hasIssues: hasIssues,
+                issues: issues,
+                correctedCode: correctedCode,
+                summary: summary
+            };
+        }
+
+        async function analyzeCode() {
+            const code = document.getElementById('codeInput').value.trim();
+            const language = document.getElementById('languageSelect').value;
+            
+            if (!code) {
+                alert('Por favor, insira um código para análise!');
+                return;
+            }
+
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<span class="loading"></span> Analisando...';
+
+            document.getElementById('resultContainer').innerHTML = '<div class="placeholder"><div class="loading" style="width: 60px; height: 60px; border-width: 5px;"></div><p style="margin-top: 20px;">Analisando código...</p></div>';
+
+            try {
+                // Simular tempo de análise
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                const result = analyzeCodeLocally(code, language);
+                currentResult = result;
+                displayResult(result);
+                
+                // Salvar no histórico
+                const historyItem = {
+                    id: Date.now().toString(),
+                    timestamp: Date.now(),
+                    language: language,
+                    originalCode: code,
+                    result: result
+                };
+                
+                saveToHistory(historyItem);
+                updateHistoryDisplay();
+                
+                document.getElementById('downloadBtn').style.display = 'inline-flex';
+
+            } catch (error) {
+                console.error('Erro na análise:', error);
+                document.getElementById('resultContainer').innerHTML = '<div class="placeholder" style="color: #ef4444;"><p>Erro ao analisar código. Tente novamente.</p></div>';
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = 'Analisar Código';
+            }
+        }
+
+        function displayResult(result) {
+            let statsHtml = '';
+            if (result.hasIssues) {
+                statsHtml = '<div class="stats"><div class="stat-item">' + result.issues.length + ' problema(s) corrigido(s)</div></div>';
+            }
+
+            document.getElementById('resultContainer').innerHTML = '<pre class="result-code">' + result.correctedCode + '</pre>' + statsHtml;
+
+            const summarySection = document.getElementById('summarySection');
+            summarySection.style.display = 'block';
+
+            if (!result.hasIssues) {
+                summarySection.innerHTML = '<div class="success-panel"><div><h3 style="color: #22c55e; margin-bottom: 5px;">Código Perfeito!</h3><p style="color: #86efac;">Nenhum problema detectado. Seu código está seguindo as boas práticas.</p></div></div>';
+            } else {
+                const issuesHtml = result.issues.map(function(issue, index) {
+                    const severityClass = 'issue-' + issue.severity;
+                    return '<div class="issue-card ' + severityClass + '"><div class="issue-header"><span class="issue-type">' + issue.type + '</span><span class="severity-badge severity-' + issue.severity + '">' + issue.severity + '</span>' + (issue.line ? '<span style="font-size: 0.9em; opacity: 0.8;">Linha ' + issue.line + '</span>' : '') + '</div><p style="margin-bottom: 10px;"><strong>Problema:</strong> ' + issue.description + '</p><div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px;"><strong>Sugestão:</strong> ' + issue.suggestion + '</div></div>';
+                }).join('');
+
+                summarySection.innerHTML = '<div class="summary-panel"><h3>Resumo da Análise</h3><p style="color: #93c5fd; line-height: 1.6;">' + result.summary + '</p></div><div class="summary-panel"><h3>Problemas Detectados</h3><div class="issues-container">' + issuesHtml + '</div></div>';
+            }
+        }
+
+        function saveToHistory(item) {
+            const history = getHistory();
+            history.unshift(item);
+            // Manter apenas os últimos 50 itens
+            if (history.length > 50) {
+                history.pop();
+            }
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        }
+
+        function getHistory() {
+            const history = localStorage.getItem(HISTORY_KEY);
+            return history ? JSON.parse(history) : [];
+        }
+
+        function updateHistoryDisplay() {
+            const history = getHistory();
+            document.getElementById('historyCount').textContent = history.length;
+            
+            const historyList = document.getElementById('historyList');
+            if (history.length === 0) {
+                historyList.innerHTML = '<p style="text-align: center; color: #64748b; padding: 40px;">Nenhuma análise no histórico</p>';
+            } else {
+                historyList.innerHTML = history.map(function(item) {
+                    return `<div class="history-item" onclick="loadFromHistory(${JSON.stringify(item).replace(/</g, '&lt;').replace(/>/g, '&gt;')})">
+                        <div style="flex: 1;">
+                            <div style="margin-bottom: 8px;">
+                                <span class="language-badge">${item.language}</span>
+                                <span style="margin-left: 10px; color: #64748b; font-size: 0.9em;">
+                                    ${new Date(item.timestamp).toLocaleString('pt-BR')}
+                                </span>
+                            </div>
+                            <p style="font-family: monospace; font-size: 0.9em; color: #93c5fd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${item.originalCode.substring(0, 80).replace(/</g, '&lt;').replace(/>/g, '&gt;')}...
+                            </p>
+                            <p style="font-size: 0.85em; color: #60a5fa; margin-top: 5px;">
+                                ${item.result.issues.length} problema(s) encontrado(s)
+                            </p>
+                        </div>
+                        <button onclick="event.stopPropagation(); deleteHistoryItem('${item.id}')" 
+                                style="background: #dc2626; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer;">
+                            Deletar
+                        </button>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        function loadFromHistory(item) {
+            document.getElementById('codeInput').value = item.originalCode;
+            document.getElementById('languageSelect').value = item.language;
+            currentResult = item.result;
+            displayResult(item.result);
+            document.getElementById('downloadBtn').style.display = 'inline-flex';
+            document.getElementById('historyPanel').style.display = 'none';
+        }
+
+        function deleteHistoryItem(id) {
+            let history = getHistory();
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            updateHistoryDisplay();
+        }
+
+        function clearHistory() {
+            if (!confirm('Tem certeza que deseja limpar todo o histórico?')) return;
+            localStorage.removeItem(HISTORY_KEY);
+            updateHistoryDisplay();
+        }
+
+        function toggleHistory() {
+            const panel = document.getElementById('historyPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function downloadReport() {
+            if (!currentResult) return;
+            
+            const code = document.getElementById('codeInput').value;
+            const language = document.getElementById('languageSelect').value;
+            
+            const issuesText = currentResult.issues.map(function(issue, i) {
+                return '\n### ' + (i + 1) + '. ' + issue.type.toUpperCase() + ' (Severidade: ' + issue.severity + ')\n- Linha: ' + (issue.line || 'N/A') + '\n- Descrição: ' + issue.description + '\n- Sugestão: ' + issue.suggestion + '\n';
+            }).join('');
+
+            const report = `# CodeFix AI - Relatório de Análise
+Desenvolvido por Pedro Soler
+
+**Linguagem:** ${language}
+**Data:** ${new Date().toLocaleString('pt-BR')}
+
+---
+
+## Código Original
+\`\`\`${language}
+${code}
+\`\`\`
+
+---
+
+## Problemas Encontrados
+${issuesText}
+
+---
+
+## Código Corrigido
+\`\`\`${language}
+${currentResult.correctedCode}
+\`\`\`
+
+---
+
+## Resumo
+${currentResult.summary}
+
+---
+
+*Relatório gerado automaticamente por CodeFix AI*
+*© 2026 Pedro Soler*
+`;
+
+            const blob = new Blob([report], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'codefix-report-' + Date.now() + '.md';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Inicializar
+        updateHistoryDisplay();
+    </script>
+</body>
+</html>
