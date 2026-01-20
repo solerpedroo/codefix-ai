@@ -13,7 +13,7 @@ Desenvolvido por **Pedro Soler**
 
 ---
 
-## ✨ Funcionalidades
+## 🔧 Funcionalidades
 
 - 🐛 **Detecção Automática de Bugs** - Identifica erros lógicos e problemas no código
 - ⚡ **Análise de Performance** - Detecta gargalos e código ineficiente
@@ -152,4 +152,5 @@ O projeto utiliza uma paleta de cores azul escuro moderna:
 - ⚠️ Não envie códigos com informações sensíveis (senhas, tokens, etc.)
 
 ---
+
 
